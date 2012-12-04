@@ -50,6 +50,7 @@ class Connection(FrameHandler):
         self.on_error = None
         self._close_callback = None
         self._frame_count = 0
+        self._channel_idx = 0 
         super(Connection, self).__init__(connection=self)
 
     def connect(self, callback):
@@ -94,12 +95,29 @@ class Connection(FrameHandler):
     def channel(self, callback=None):
         """get a Channel instance"""
         if self.status == status.OPENED:
-            ch = Channel(channel_id=len(self.channels), conn=self)
-            self.channels.append(ch)
+            id = self._next_channel_id()
+            ch = Channel(channel_id=id, conn=self)
+            if (id < len(self.channels)):
+                self.channels[id] = ch
+            else:
+                self.channels.append(ch)
             ch.open(callback)
             return ch
         else:
             raise ValueError('connection is not opened')
+
+    def _next_channel_id(self): 
+        """return the next unused channel_id (unsigned short)"""
+        self._channel_idx = (self._channel_idx + 1) % 65536
+        if (self._channel_idx < len(self.channels)):
+            start_id = self._channel_idx
+            # all ids have been used at least once, so seek for next closed
+            while (self.channels[self._channel_idx].status != status.CLOSED):
+                self._channel_idx = (self._channel_idx + 1) % 65536
+                # seek wrapped, max # of channels are open 
+                if (self._channel_idx == start_id):
+                     raise Exception('max channels per connection exceeded')
+        return self._channel_idx
 
     def _handshake(self):
         self.stream.write('AMQP\x00\x00\x09\x01')
