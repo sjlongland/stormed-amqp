@@ -1,4 +1,5 @@
 import unittest
+import sys
 
 from tornado import testing
 
@@ -143,6 +144,31 @@ class TestChannel(testing.AsyncTestCase):
 
         conn.connect(on_connect)
         self.wait()
+
+    def test_channel_id_rollover(self):
+        global count
+
+        conn = Connection('localhost', io_loop=self.io_loop)
+
+        count = 0
+
+        def next_channel():
+            global count
+            count += 1
+            self.ch = conn.channel()
+            if (count < 70000):
+                self.ch.close(callback=next_channel)
+            else:
+                self.ch.close(callback=cleanup)
+
+        def on_connect():
+            next_channel()
+
+        def cleanup():
+            conn.close(self.stop)
+
+        conn.connect(on_connect)
+        self.wait(timeout=300)
 
     def test_purge_queue(self):
 
