@@ -184,7 +184,7 @@ class Channel(FrameHandler):
                                           nowait    = False), callback)
 
     def queue_declare(self, queue='', passive=False, durable=True,
-                            exclusive=False, auto_delete=False,
+                            exclusive=False, auto_delete=False, no_wait=False,
                             arguments=None, callback=None):
         """
         Declare queue, create if needed.
