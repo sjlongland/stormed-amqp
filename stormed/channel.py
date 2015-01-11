@@ -307,8 +307,8 @@ class Channel(FrameHandler):
                                         durable     = durable,
                                         exclusive   = exclusive,
                                         auto_delete = auto_delete,
-                                        nowait      = False,
-                                        arguments   = dict()), callback)
+                                        nowait      = no_wait,
+                                        arguments   = arguments), callback)
 
     def queue_delete(self, queue, if_unused=False, if_empty=False,
                            callback=None):
