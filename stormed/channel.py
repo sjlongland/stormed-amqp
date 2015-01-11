@@ -54,17 +54,96 @@ class Channel(FrameHandler):
         _close = Close(reply_code=0, reply_text='', class_id=0, method_id=0)
         self.send_method(_close, callback)
 
-    def exchange_declare(self, exchange, type="direct", durable=False,
-                               callback=None):
+    def exchange_declare(self, exchange, type="direct", passive=False,
+                                durable=False, auto_delete=False,
+                                internal=False, no_wait=False,
+                                arguments=None, callback=None):
+        """
+        Verify exchange exists, create if needed.
+
+        This method creates an exchange if it does not already exist, and if
+        the exchange exists, verifies that it is of the correct and expected
+        class.
+
+        Parameters
+        ----------
+
+        passive : bool
+
+            If set, the server will reply with Declare-Ok if the exchange
+            already exists with the same name, and raise an error if not. The
+            client can use this to check whether an exchange exists without
+            modifying the server state. When set, all other method fields
+            except name and no-wait are ignored. A declare with both passive
+            and no-wait has no effect.  Arguments are compared for semantic
+            equivalence.
+
+            If set, and the exchange does not already exist, the server MUST
+            raise a channel exception with reply code 404 (not found).  If not
+            set and the exchange exists, the server MUST check that the
+            existing exchange has the same values for type, durable, and
+            arguments fields. The server MUST respond with Declare-Ok if the
+            requested exchange matches these fields, and MUST raise a channel
+            exception if not.
+
+        durable : bool
+
+            If set when creating a new exchange, the exchange will be marked as
+            durable. Durable exchanges remain active when a server restarts.
+            Non-durable exchanges (transient exchanges) are purged if/when a
+            server restarts.
+
+            The server MUST support both durable and transient exchanges.
+
+        auto_delete : bool
+
+            If set, the exchange is deleted when all queues have finished using
+            it.
+
+            The server SHOULD allow for a reasonable delay between the point
+            when it determines that an exchange is not being used (or no longer
+            used), and the point when it deletes the exchange. At the least it
+            must allow a client to create an exchange and then bind a queue to
+            it, with a small but non-zero delay between these two actions.
+
+            The server MUST ignore the auto-delete field if the exchange
+            already exists.
+
+            This is a RabbitMQ extension.
+
+        internal : bool
+
+            If set, the exchange may not be used directly by publishers, but
+            only when bound to other exchanges. Internal exchanges are used to
+            construct wiring that is not visible to applications. 
+
+            This is a RabbitMQ extension.
+
+        no_wait : bool
+
+            If set, the server will not respond to the method. The client
+            should not wait for a reply method. If the server could not
+            complete the method it will raise a channel or connection
+            exception.
+
+        arguments : dict
+
+            A set of arguments for the declaration. The syntax and semantics of
+            these arguments depends on the server implementation. 
+        """
+        if arguments is None:
+            arguments = {}
+        # TODO: data types of 'arguments'?
+
         self.send_method(_exchange.Declare(ticket      = 0,
                                            exchange    = exchange,
                                            type        = type,
-                                           passive     = False,
+                                           passive     = passive,
                                            durable     = durable,
-                                           auto_delete = False,
-                                           internal    = False,
-                                           nowait      = False,
-                                           arguments   = dict()), callback)
+                                           auto_delete = auto_delete,
+                                           internal    = internal,
+                                           nowait      = no_wait,
+                                           arguments   = arguments), callback)
 
     def exchange_delete(self, exchange, if_unused=False, callback=None):
         self.send_method(_exchange.Delete(ticket    = 0,
