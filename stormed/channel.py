@@ -65,8 +65,39 @@ class Channel(FrameHandler):
         the exchange exists, verifies that it is of the correct and expected
         class.
 
+        - The server SHOULD support a minimum of 16 exchanges per virtual host
+          and ideally, impose no limit except as defined by available
+          resources.
+
         Parameters
         ----------
+
+        exchange : str
+
+            The name of the exchange to declare.
+
+            - Exchange names starting with "amq." are reserved for pre-declared
+              and standardised exchanges. The client MAY declare an exchange
+              starting with "amq." if the passive option is set, or the
+              exchange already exists. Error code: access-refused
+            - The exchange name consists of a non-empty sequence of these
+              characters: letters, digits, hyphen, underscore, period, or
+              colon.  Error code: precondition-failed
+
+        type : str
+
+            Each exchange belongs to one of a set of exchange types implemented
+            by the server. The exchange types define the functionality of the
+            exchange - i.e. how messages are routed through it. It is not valid
+            or meaningful to attempt to change the type of an existing
+            exchange.
+
+            - Exchanges cannot be redeclared with different types. The client
+              MUST not attempt to redeclare an existing exchange with a
+              different type than used in the original Exchange.Declare method.
+              Error code: not-allowed
+            - The client MUST NOT attempt to declare an exchange with a type
+              that the server does not support. Error code: command-invalid
 
         passive : bool
 
@@ -78,13 +109,13 @@ class Channel(FrameHandler):
             and no-wait has no effect.  Arguments are compared for semantic
             equivalence.
 
-            If set, and the exchange does not already exist, the server MUST
-            raise a channel exception with reply code 404 (not found).  If not
-            set and the exchange exists, the server MUST check that the
-            existing exchange has the same values for type, durable, and
-            arguments fields. The server MUST respond with Declare-Ok if the
-            requested exchange matches these fields, and MUST raise a channel
-            exception if not.
+            - If set, and the exchange does not already exist, the server MUST
+              raise a channel exception with reply code 404 (not found).
+            - If not set and the exchange exists, the server MUST check that
+              the existing exchange has the same values for type, durable, and
+              arguments fields. The server MUST respond with Declare-Ok if the
+              requested exchange matches these fields, and MUST raise a channel
+              exception if not.
 
         durable : bool
 
@@ -93,31 +124,32 @@ class Channel(FrameHandler):
             Non-durable exchanges (transient exchanges) are purged if/when a
             server restarts.
 
-            The server MUST support both durable and transient exchanges.
+            - The server MUST support both durable and transient exchanges.
 
         auto_delete : bool
 
             If set, the exchange is deleted when all queues have finished using
             it.
 
-            The server SHOULD allow for a reasonable delay between the point
-            when it determines that an exchange is not being used (or no longer
-            used), and the point when it deletes the exchange. At the least it
-            must allow a client to create an exchange and then bind a queue to
-            it, with a small but non-zero delay between these two actions.
+            - The server SHOULD allow for a reasonable delay between the point
+              when it determines that an exchange is not being used (or no
+              longer used), and the point when it deletes the exchange. At the
+              least it must allow a client to create an exchange and then bind
+              a queue to it, with a small but non-zero delay between these two
+              actions.
 
-            The server MUST ignore the auto-delete field if the exchange
-            already exists.
+            - The server MUST ignore the auto-delete field if the exchange
+              already exists.
 
-            This is a RabbitMQ extension.
+            - This is a RabbitMQ extension.
 
         internal : bool
 
             If set, the exchange may not be used directly by publishers, but
             only when bound to other exchanges. Internal exchanges are used to
-            construct wiring that is not visible to applications. 
+            construct wiring that is not visible to applications.
 
-            This is a RabbitMQ extension.
+            - This is a RabbitMQ extension.
 
         no_wait : bool
 
@@ -129,7 +161,7 @@ class Channel(FrameHandler):
         arguments : dict
 
             A set of arguments for the declaration. The syntax and semantics of
-            these arguments depends on the server implementation. 
+            these arguments depends on the server implementation.
         """
         if arguments is None:
             arguments = {}
@@ -152,18 +184,122 @@ class Channel(FrameHandler):
                                           nowait    = False), callback)
 
     def queue_declare(self, queue='', passive=False, durable=True,
-                            exclusive=False, auto_delete=False, callback=None):
-        """implements "queue.declare" AMQP method
-
-        the callback receives as argument a queue.DeclareOk method instance:
-
-            def on_creation(qinfo):
-                print qinfo.queue # queue name
-                print qinfo.message_count
-                print qinfo.consumer_count
-
-            channel.queue_declare('queue_name', callback=on_creation)
+                            exclusive=False, auto_delete=False,
+                            arguments=None, callback=None):
         """
+        Declare queue, create if needed.
+
+        This method creates or checks a queue. When creating a new queue the
+        client can specify various properties that control the durability of
+        the queue and its contents, and the level of sharing for the queue.
+
+        The server MUST create a default binding for a newly-declared queue to
+        the default exchange, which is an exchange of type 'direct' and use the
+        queue name as the routing key.
+
+        The server SHOULD support a minimum of 256 queues per virtual host and
+        ideally, impose no limit except as defined by available resources.
+
+        Parameters
+        ----------
+
+        queue : str
+
+            The name of the queue.
+
+            The queue name MAY be empty, in which case the server MUST create a
+            new queue with a unique generated name and return this to the
+            client in the Declare-Ok method.
+
+            Queue names starting with "amq." are reserved for pre-declared and
+            standardised queues. The client MAY declare a queue starting with
+            "amq." if the passive option is set, or the queue already exists.
+            Error code: access-refused
+
+            The queue name can be empty, or a sequence of these characters:
+            letters, digits, hyphen, underscore, period, or colon. Error code:
+            precondition-failed
+
+        passive : bool
+
+            If set, the server will reply with Declare-Ok if the queue already
+            exists with the same name, and raise an error if not. The client
+            can use this to check whether a queue exists without modifying the
+            server state. When set, all other method fields except name and
+            no-wait are ignored. A declare with both passive and no-wait has no
+            effect. Arguments are compared for semantic equivalence.
+
+            The client MAY ask the server to assert that a queue exists without
+            creating the queue if not. If the queue does not exist, the server
+            treats this as a failure. Error code: not-found
+
+            If not set and the queue exists, the server MUST check that the
+            existing queue has the same values for durable, exclusive,
+            auto-delete, and arguments fields. The server MUST respond with
+            Declare-Ok if the requested queue matches these fields, and MUST
+            raise a channel exception if not.
+
+        durable : bool
+
+            If set when creating a new queue, the queue will be marked as
+            durable. Durable queues remain active when a server restarts.
+            Non-durable queues (transient queues) are purged if/when a server
+            restarts. Note that durable queues do not necessarily hold
+            persistent messages, although it does not make sense to send
+            persistent messages to a transient queue.
+
+            - The server MUST recreate the durable queue after a restart.
+            - The server MUST support both durable and transient queues.
+
+        exclusive : bool
+
+            Exclusive queues may only be accessed by the current connection,
+            and are deleted when that connection closes. Passive declaration of
+            an exclusive queue by other connections are not allowed.
+
+            - The server MUST support both exclusive (private) and
+              non-exclusive (shared) queues.
+            - The client MAY NOT attempt to use a queue that was declared as
+              exclusive by another still-open connection. Error code:
+              resource-locked
+
+        auto_delete : bool
+
+            If set, the queue is deleted when all consumers have finished using
+            it. The last consumer can be cancelled either explicitly or because
+            its channel is closed. If there was no consumer ever on the queue,
+            it won't be deleted. Applications can explicitly delete auto-delete
+            queues using the Delete method as normal.
+
+            - The server MUST ignore the auto-delete field if the queue already
+              exists.
+
+        no_wait : bool
+
+            If set, the server will not respond to the method. The client
+            should not wait for a reply method. If the server could not
+            complete the method it will raise a channel or connection
+            exception.
+
+        arguments : dict
+
+            A set of arguments for the declaration. The syntax and semantics of
+            these arguments depends on the server implementation.
+
+        callback : callable
+            The callback receives as argument a queue.DeclareOk method instance:
+
+                def on_creation(qinfo):
+                    print qinfo.queue # queue name
+                    print qinfo.message_count
+                    print qinfo.consumer_count
+
+                channel.queue_declare('queue_name', callback=on_creation)
+        """
+
+        if arguments is None:
+            arguments = {}
+        # TODO: data types of 'arguments'?
 
         self.send_method(_queue.Declare(ticket      = 0,
                                         queue       = queue,
