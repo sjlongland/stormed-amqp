@@ -50,7 +50,7 @@ class Connection(FrameHandler):
         self.on_error = None
         self._close_callback = None
         self._frame_count = 0
-        self._channel_idx = 0 
+        self._channel_idx = 0
         super(Connection, self).__init__(connection=self)
 
     def connect(self, callback):
@@ -106,7 +106,7 @@ class Connection(FrameHandler):
         else:
             raise ValueError('connection is not opened')
 
-    def _next_channel_id(self): 
+    def _next_channel_id(self):
         """return the next unused channel_id (unsigned short)"""
         self._channel_idx = (self._channel_idx + 1) % 65536
         if (self._channel_idx < len(self.channels)):
@@ -114,7 +114,7 @@ class Connection(FrameHandler):
             # all ids have been used at least once, so seek for next closed
             while (self.channels[self._channel_idx].status != status.CLOSED):
                 self._channel_idx = (self._channel_idx + 1) % 65536
-                # seek wrapped, max # of channels are open 
+                # seek wrapped, max # of channels are open
                 if (self._channel_idx == start_id):
                      raise Exception('max channels per connection exceeded')
         return self._channel_idx
