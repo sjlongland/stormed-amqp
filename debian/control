@@ -1,0 +1,12 @@
+Source: stormed-amqp
+Maintainer: Paolo Losi <paolo.losi@gmail.com>
+Section: python
+Priority: optional
+Build-Depends: python-setuptools (>= 0.6b3), python-all (>= 2.6.6-3), debhelper (>= 9)
+Standards-Version: 3.9.1
+
+Package: python-stormed-amqp
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}
+Description: native tornadoweb amqp 0-9-1 client implementation
+

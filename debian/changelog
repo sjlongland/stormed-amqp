@@ -1,0 +1,5 @@
+stormed-amqp (0.2-1) unstable; urgency=low
+
+  * Release v0.2_p1 from https://github.com/sjlongland/stormed-amqp
+
+ -- Stuart Longland <me@vk4msl.yi.org>  Mon, 12 Jan 2015 10:00:00 +1000
